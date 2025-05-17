@@ -66,7 +66,8 @@ class YOLOTracker(BaseTracker):
 
 
     def track(self, image, info: dict = None) -> dict:
-        # Chạy YOLOv9 + ByteTrack để lấy kết quả
+        self.frame_num += 1  # Đã thêm tăng frame_num
+        # Chạy YOLOv9 + ByteTrack
         result = self.model.track(image, persist=True, tracker="bytetrack.yaml", imgsz=320)[0]
         boxes = result.boxes
         matched_box = None
@@ -79,18 +80,32 @@ class YOLOTracker(BaseTracker):
                     min_id = tid
                     x1, y1, x2, y2 = box.xyxy[0]
                     matched_box = [
-                        x1.item(),  # x
-                        y1.item(),  # y
-                        (x2 - x1).item(),  # width
-                        (y2 - y1).item()   # height
+                        float(x1),            # x
+                        float(y1),            # y
+                        float(x2 - x1),       # width
+                        float(y2 - y1)        # height
                     ]
 
         if matched_box is not None:
             self.prev_state = matched_box
-        else:
+        elif self.prev_state is not None:
             print(f"[Warning] Không tìm thấy object nào trong frame {self.frame_num}, dùng prev_state.")
+        else:
+            print("[Error] Frame đầu không có object nào — gán bbox mặc định tránh crash.")
+            self.prev_state = [0.0, 0.0, 10.0, 10.0]
 
-        return OrderedDict({'target_bbox': self.prev_state})
+        # Tạo OrderedDict từ prev_state để trả về
+        out = OrderedDict([
+            ('x', self.prev_state[0]),
+            ('y', self.prev_state[1]),
+            ('w', self.prev_state[2]),
+            ('h', self.prev_state[3])
+        ])
+
+        # Trả về dictionary với target_bbox là một OrderedDict
+        return {'target_bbox': out}
+
+
     @staticmethod
     def _compute_iou(boxA, boxB):
         xA = max(boxA[0], boxB[0])
