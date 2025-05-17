@@ -1,0 +1,7 @@
+name: custom
+class: pytracking.evaluation.data.sequence_dataset.SequenceDataset
+args:
+  root: datasets/custom
+  image_loader: default
+  suffix: .jpg
+  annotation_loader: default
